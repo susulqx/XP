@@ -76,48 +76,24 @@ public class BypassHook implements IXposedHookLoadPackage {
                 XposedBridge.log("[Bypass] Hook 3 FAIL: " + t);
             }
 
-            // ===== Hook 4: no App A — fake callback via reflection =====
-            final Class<?> of8Class = lpparam.classLoader.loadClass("of8");
-            XposedHelpers.findAndHookMethod(of8Class, "onViewCreated",
-                android.view.View.class, android.os.Bundle.class,
-                new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) {
-                        final Object fragment = param.thisObject;
-                        XposedBridge.log("[Bypass] onViewCreated -> schedule fake callback");
-                        new android.os.Handler(android.os.Looper.getMainLooper())
-                            .postDelayed(new Runnable() {
-                                public void run() {
-                                    try {
-                                        Object lz0 = XposedHelpers.getObjectField(fragment, "oO0o0Oo");
-                                        Object callback = null;
-                                        for (java.lang.reflect.Field f : lz0.getClass().getDeclaredFields()) {
-                                            if (f.getType().getName().contains("ActivityResultCallback")) {
-                                                f.setAccessible(true);
-                                                callback = f.get(lz0);
-                                                break;
-                                            }
-                                        }
-                                        if (callback != null) {
-                                            Object fake = createFakeLlf(llfClass);
-                                            XposedHelpers.setStaticObjectField(zccClass, "oO0OOO0", fake);
-                                            XposedHelpers.setBooleanField(fragment, "oO0o0OOo", true);
-                                            java.lang.reflect.Method apply = callback.getClass()
-                                                .getDeclaredMethod("apply", Object.class);
-                                            apply.setAccessible(true);
-                                            apply.invoke(callback, fake);
-                                            XposedBridge.log("[Bypass] Fake callback OK!");
-                                        } else {
-                                            XposedBridge.log("[Bypass] callback not found in Lz0");
-                                        }
-                                    } catch (Throwable t) {
-                                        XposedBridge.log("[Bypass] callback FAIL: " + t);
-                                    }
-                                }
-                            }, 2500);
-                    }
-                });
-            XposedBridge.log("[Bypass] Hook 4: fake callback injector");
+            // ===== Hook 4: createIntent — 无 App A 时返回有效 Intent 避免抛异常 =====
+            try {
+                Class<?> contract = lpparam.classLoader.loadClass("of8$oO0OO0Oo");
+                XposedHelpers.findAndHookMethod(contract, "oO0OO00",
+                    android.content.Context.class, Object.class,
+                    new XC_MethodReplacement() {
+                        @Override
+                        protected Object replaceHookedMethod(MethodHookParam param) {
+                            XposedBridge.log("[Bypass] createIntent -> fake launcher");
+                            // Return an Intent that resolves to App B's own Launcher
+                            // This prevents the of8$oO0OO0O exception, allowing
+                            // ActivityResult to complete and Hook 3 to fire
+                            return new android.content.Intent()
+                                .setClassName("app.unique.one", "app.unique.one.Launcher")
+                                .addCategory(android.content.Intent.CATEGORY_DEFAULT);
+                        }
+                    });
+                XposedBridge.log("[Bypass] Hook 4: createIntent");
 
         } catch (Throwable t) {
             XposedBridge.log("[Bypass] FAIL: " + t);
