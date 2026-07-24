@@ -1,0 +1,44 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+
+# IDEA / Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+captures/
+.navigation/
+
+# Local config
+local.properties
+keystore.properties
+
+# OS
+.DS_Store
+Thumbs.db
+
+# WorkBuddy workspace data (private)
+.workbuddy/
+
+# Logs
+*.log
+hs_err_pid*
+
+# Keystores (if you add signing later)
+*.jks
+*.keystore
