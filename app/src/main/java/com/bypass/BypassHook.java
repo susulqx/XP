@@ -82,6 +82,57 @@ public class BypassHook implements IXposedHookLoadPackage {
             XposedBridge.log("[Bypass] Hooks FAIL: " + t);
         }
 
+        // ===== Hook 4: of8.O00OO() — 跳过 ActivityResult，直接设已订阅 =====
+        try {
+            final Class<?> of8Class = lpparam.classLoader.loadClass("of8");
+            XposedHelpers.findAndHookMethod(of8Class, "O00OO",
+                new XC_MethodReplacement() {
+                    @Override
+                    protected Object replaceHookedMethod(MethodHookParam param) {
+                        XposedBridge.log("[Bypass] O00OO() -> skip, set subscribed");
+                        XposedHelpers.setBooleanField(param.thisObject, "oO0o0OOo", true);
+                        return null;
+                    }
+                });
+            XposedBridge.log("[Bypass] Hook 4: O00OO()");
+        } catch (Throwable t) {
+            XposedBridge.log("[Bypass] Hook 4 FAIL: " + t);
+        }
+
+        // ===== Hook 5: of8.O00OO0() — 阻止空白页 =====
+        try {
+            final Class<?> of8Class = lpparam.classLoader.loadClass("of8");
+            XposedHelpers.findAndHookMethod(of8Class, "O00OO0",
+                new XC_MethodReplacement() {
+                    @Override
+                    protected Object replaceHookedMethod(MethodHookParam param) {
+                        XposedBridge.log("[Bypass] O00OO0() blocked");
+                        XposedHelpers.setBooleanField(param.thisObject, "oO0o0OOo", true);
+                        return null;
+                    }
+                });
+            XposedBridge.log("[Bypass] Hook 5: O00OO0()");
+        } catch (Throwable t) {
+            XposedBridge.log("[Bypass] Hook 5 FAIL: " + t);
+        }
+
+        // ===== Hook 6: of8.onViewCreated — 确保标志位在所有流程后都设好 =====
+        try {
+            final Class<?> of8Class = lpparam.classLoader.loadClass("of8");
+            XposedHelpers.findAndHookMethod(of8Class, "onViewCreated",
+                android.view.View.class, android.os.Bundle.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) {
+                        XposedHelpers.setBooleanField(param.thisObject, "oO0o0OOo", true);
+                        XposedBridge.log("[Bypass] onViewCreated -> oO0o0OOo=true");
+                    }
+                });
+            XposedBridge.log("[Bypass] Hook 6: onViewCreated");
+        } catch (Throwable t) {
+            XposedBridge.log("[Bypass] Hook 6 FAIL: " + t);
+        }
+
         XposedBridge.log("[Bypass] === All hooks installed ===");
     }
 }
