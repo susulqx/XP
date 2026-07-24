@@ -8,6 +8,15 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public class BypassHook implements IXposedHookLoadPackage {
 
+    private static Object createFakeLlf(Class<?> llfClass) throws Exception {
+        Object obj = llfClass.getDeclaredConstructor().newInstance();
+        XposedHelpers.setBooleanField(obj, "oO0OOO", true);
+        XposedHelpers.setBooleanField(obj, "oO0OO0O", true);
+        XposedHelpers.setLongField(obj, "oO0OO0Oo", Long.MAX_VALUE);
+        XposedHelpers.setIntField(obj, "oO0OooO0", 0);
+        return obj;
+    }
+
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) {
         if (!"app.unique.one".equals(lpparam.packageName)) return;
@@ -22,13 +31,11 @@ public class BypassHook implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod(zccClass, "oO0OO0O", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    Object obj = llfClass.newInstance();
-                    XposedHelpers.setBooleanField(obj, "oO0OOO", true);
-                    XposedHelpers.setBooleanField(obj, "oO0OO0O", true);
-                    XposedHelpers.setLongField(obj, "oO0OO0Oo", Long.MAX_VALUE);
-                    XposedHelpers.setIntField(obj, "oO0OooO0", 0);
-                    XposedHelpers.setStaticObjectField(zccClass, "oO0OOO0", obj);
-                    param.setResult(obj);
+                    try {
+                        Object obj = createFakeLlf(llfClass);
+                        XposedHelpers.setStaticObjectField(zccClass, "oO0OOO0", obj);
+                        param.setResult(obj);
+                    } catch (Throwable ignored) {}
                 }
             });
             XposedBridge.log("[Bypass] Hook 1: oO0OO0O()");
@@ -49,12 +56,9 @@ public class BypassHook implements IXposedHookLoadPackage {
                     android.content.Intent.class, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        Object obj = llfClass.newInstance();
-                        XposedHelpers.setBooleanField(obj, "oO0OOO", true);
-                        XposedHelpers.setBooleanField(obj, "oO0OO0O", true);
-                        XposedHelpers.setLongField(obj, "oO0OO0Oo", Long.MAX_VALUE);
-                        XposedHelpers.setIntField(obj, "oO0OooO0", 0);
-                        param.setResult(obj);
+                        try {
+                            param.setResult(createFakeLlf(llfClass));
+                        } catch (Throwable ignored) {}
                     }
                 });
                 XposedBridge.log("[Bypass] Hook 3: ActivityResult handler");
