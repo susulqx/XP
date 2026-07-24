@@ -5,6 +5,11 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
+plugins {
+    id 'com.android.application' version '8.7.0' apply false
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -12,10 +17,6 @@ dependencyResolutionManagement {
         mavenCentral()
         maven { url 'https://api.xposed.info/' }
     }
-}
-
-plugins {
-    id 'com.android.application' version '8.7.0' apply false
 }
 
 rootProject.name = "XposedBypass"
