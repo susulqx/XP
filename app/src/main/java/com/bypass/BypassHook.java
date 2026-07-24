@@ -73,12 +73,8 @@ public class BypassHook implements IXposedHookLoadPackage {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        // Only affect app.unique.one process
-                        if ("app.unique.one".equals(
-                                android.app.ActivityThread.currentProcessName())) {
-                            param.setResult(false);
-                            XposedBridge.log("[Bypass] isTaskRoot -> false");
-                        }
+                        param.setResult(false);
+                        XposedBridge.log("[Bypass] isTaskRoot -> false");
                     }
                 }
             );
