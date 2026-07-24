@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only hook app.unique.one -->
+    <string-array name="xposed_scope">
+        <item>app.unique.one</item>
+    </string-array>
+</resources>

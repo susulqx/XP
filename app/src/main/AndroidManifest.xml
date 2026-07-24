@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.bypass">
+
+    <application
+        android:allowBackup="false"
+        android:label="订阅绕过模块"
+        android:supportsRtl="true">
+
+        <!-- Xposed module declaration -->
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+
+        <!-- Module description -->
+        <meta-data
+            android:name="xposeddescription"
+            android:value="绕过 app.unique.one 的订阅检测" />
+
+        <!-- Minimum Xposed API version -->
+        <meta-data
+            android:name="xposedminversion"
+            android:value="82" />
+
+        <!-- Target package scope ("app.unique.one" only) -->
+        <meta-data
+            android:name="xposedscope"
+            android:resource="@array/xposed_scope" />
+
+    </application>
+
+</manifest>
