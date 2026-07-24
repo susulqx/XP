@@ -76,24 +76,60 @@ public class BypassHook implements IXposedHookLoadPackage {
                 XposedBridge.log("[Bypass] Hook 3 FAIL: " + t);
             }
 
-            // ===== Hook 4: createIntent — 无 App A 时返回有效 Intent 避免抛异常 =====
+            // ===== Hook 4: capture Lyp6 callback instance for of8 =====
+            final java.util.concurrent.atomic.AtomicReference<Object> callbackRef =
+                new java.util.concurrent.atomic.AtomicReference<>();
             try {
-                Class<?> contract = lpparam.classLoader.loadClass("of8$oO0OO0Oo");
-                XposedHelpers.findAndHookMethod(contract, "oO0OO00",
-                    android.content.Context.class, Object.class,
-                    new XC_MethodReplacement() {
+                // The of8 fragment's callback is a Lyp6 constructed as:
+                //   new Lyp6(4, of8Fragment)
+                Class<?> yp6Class = lpparam.classLoader.loadClass("yp6");
+                XposedHelpers.findAndHookConstructor(yp6Class, int.class, Object.class,
+                    new XC_MethodHook() {
                         @Override
-                        protected Object replaceHookedMethod(MethodHookParam param) {
-                            XposedBridge.log("[Bypass] createIntent -> fake launcher");
-                            // Return an Intent that resolves to App B's own Launcher
-                            // This prevents the of8$oO0OO0O exception, allowing
-                            // ActivityResult to complete and Hook 3 to fire
-                            return new android.content.Intent()
-                                .setClassName("app.unique.one", "app.unique.one.Launcher")
-                                .addCategory(android.content.Intent.CATEGORY_DEFAULT);
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            int arg0 = (Integer) param.args[0];
+                            Object arg1 = param.args[1];
+                            if (arg0 == 4 && arg1.getClass().getName().equals("of8")) {
+                                callbackRef.set(param.thisObject);
+                                XposedBridge.log("[Bypass] Captured of8 callback instance");
+                            }
                         }
                     });
-                XposedBridge.log("[Bypass] Hook 4: createIntent");
+                XposedBridge.log("[Bypass] Hook 4: Lyp6 constructor");
+
+                // ===== Hook 5: onViewCreated → invoke callback directly =====
+                final Class<?> of8Class = lpparam.classLoader.loadClass("of8");
+                XposedHelpers.findAndHookMethod(of8Class, "onViewCreated",
+                    android.view.View.class, android.os.Bundle.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            XposedBridge.log("[Bypass] onViewCreated -> schedule fake callback");
+                            new android.os.Handler(android.os.Looper.getMainLooper())
+                                .postDelayed(new Runnable() {
+                                    public void run() {
+                                        Object cb = callbackRef.get();
+                                        if (cb == null) {
+                                            XposedBridge.log("[Bypass] callback not captured yet");
+                                            return;
+                                        }
+                                        try {
+                                            Object fake = createFakeLlf(llfClass);
+                                            XposedHelpers.setStaticObjectField(zccClass, "oO0OOO0", fake);
+                                            XposedBridge.log("[Bypass] Invoking callback with fakeLlf...");
+                                            java.lang.reflect.Method apply =
+                                                cb.getClass().getDeclaredMethod("apply", Object.class);
+                                            apply.setAccessible(true);
+                                            apply.invoke(cb, fake);
+                                            XposedBridge.log("[Bypass] Callback invoked successfully!");
+                                        } catch (Throwable t) {
+                                            XposedBridge.log("[Bypass] Callback FAIL: " + t);
+                                        }
+                                    }
+                                }, 3000);
+                        }
+                    });
+                XposedBridge.log("[Bypass] Hook 5: invoke callback");
 
         } catch (Throwable t) {
             XposedBridge.log("[Bypass] FAIL: " + t);
