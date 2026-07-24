@@ -70,25 +70,9 @@ public class BypassHook implements IXposedHookLoadPackage {
             XposedBridge.log("[Bypass] Hooks 1-2 FAIL: " + t);
         }
 
-        // ===== Hook 4: isTaskRoot only for MainActivity =====
-        try {
-            final Class<?> mainAct = lpparam.classLoader.loadClass("app.module.main.MainActivity");
-            XposedHelpers.findAndHookMethod(
-                android.app.Activity.class, "isTaskRoot",
-                new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) {
-                        if (mainAct.isInstance(param.thisObject)) {
-                            param.setResult(false);
-                            XposedBridge.log("[Bypass] isTaskRoot -> false (MainActivity)");
-                        }
-                    }
-                }
-            );
-            XposedBridge.log("[Bypass] Hook 4: isTaskRoot(MainActivity only)");
-        } catch (Throwable t) {
-            XposedBridge.log("[Bypass] Hook 4 FAIL: " + t);
-        }
+        // ===== Hook 4 removed: original isTaskRoot behavior is correct =====
+        // The original smali logic: isTaskRoot=TRUE on first launch -> v2=0 -> no finish
+        // Hooking isTaskRoot=false made v2=1 -> finish() called -> blank screen
 
         XposedBridge.log("[Bypass] === All hooks installed ===");
     }
