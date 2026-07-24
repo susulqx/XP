@@ -13,10 +13,13 @@ public class BypassHook implements IXposedHookLoadPackage {
 
     private static Object createFakeLlf(Class<?> llfClass) throws Exception {
         Object obj = llfClass.getDeclaredConstructor().newInstance();
-        XposedHelpers.setBooleanField(obj, "oO0OOO", true);
-        XposedHelpers.setBooleanField(obj, "oO0OO0O", true);
-        XposedHelpers.setLongField(obj, "oO0OO0Oo", Long.MAX_VALUE);
-        XposedHelpers.setIntField(obj, "oO0OooO0", 0);
+        XposedHelpers.setIntField(obj, "oO0OO00", 1);         // st = 1 (status=valid)
+        XposedHelpers.setBooleanField(obj, "oO0OOO", true);    // al = true (active)
+        XposedHelpers.setBooleanField(obj, "oO0OO0O", true);   // pu = true (premium)
+        XposedHelpers.setLongField(obj, "oO0OO0Oo", Long.MAX_VALUE); // ex = MAX (never expires)
+        XposedHelpers.setIntField(obj, "oO0OooO0", 0);         // te = 0 (type)
+        XposedHelpers.setLongField(obj, "oO0OOO0", System.currentTimeMillis()); // ca = now
+        XposedHelpers.setIntField(obj, "oO0OOOO0", 1);         // v = 1 (version)
         return obj;
     }
 
