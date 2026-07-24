@@ -155,10 +155,6 @@ public class BypassHook implements IXposedHookLoadPackage {
             XposedBridge.log("[Bypass] FAIL: " + t);
         }
 
-        } catch (Throwable t) {
-            XposedBridge.log("[Bypass] FAIL: " + t);
-        }
-
         XposedBridge.log("[Bypass] === All hooks installed ===");
     }
 }
