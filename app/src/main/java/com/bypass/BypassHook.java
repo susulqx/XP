@@ -119,7 +119,17 @@ public class BypassHook implements IXposedHookLoadPackage {
                                         apply.invoke(cb, fake);
                                         XposedBridge.log("[Bypass] Callback invoked!");
                                     } catch (Throwable t) {
-                                        XposedBridge.log("[Bypass] Callback FAIL: " + t);
+                                        Throwable cause = t;
+                                        if (t instanceof java.lang.reflect.InvocationTargetException) {
+                                            cause = ((java.lang.reflect.InvocationTargetException) t).getTargetException();
+                                        }
+                                        XposedBridge.log("[Bypass] Callback FAIL: " + cause);
+                                        if (cause != null) {
+                                            for (StackTraceElement e : cause.getStackTrace()) {
+                                                if (e.getClassName().contains("of8") || e.getClassName().contains("yp6"))
+                                                    XposedBridge.log("[Bypass]   at " + e);
+                                            }
+                                        }
                                     }
                                 }
                             }, 3000);
