@@ -70,19 +70,22 @@ public class BypassHook implements IXposedHookLoadPackage {
             XposedBridge.log("[Bypass] Hooks 1-2 FAIL: " + t);
         }
 
-        // ===== Hook 4: Activity.isTaskRoot() — 返回 false 防止 finish() =====
+        // ===== Hook 4: isTaskRoot only for MainActivity =====
         try {
+            final Class<?> mainAct = lpparam.classLoader.loadClass("app.module.main.MainActivity");
             XposedHelpers.findAndHookMethod(
                 android.app.Activity.class, "isTaskRoot",
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        param.setResult(false);
-                        XposedBridge.log("[Bypass] isTaskRoot -> false");
+                        if (mainAct.isInstance(param.thisObject)) {
+                            param.setResult(false);
+                            XposedBridge.log("[Bypass] isTaskRoot -> false (MainActivity)");
+                        }
                     }
                 }
             );
-            XposedBridge.log("[Bypass] Hook 4: isTaskRoot()");
+            XposedBridge.log("[Bypass] Hook 4: isTaskRoot(MainActivity only)");
         } catch (Throwable t) {
             XposedBridge.log("[Bypass] Hook 4 FAIL: " + t);
         }
