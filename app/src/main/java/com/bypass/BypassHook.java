@@ -65,10 +65,12 @@ public class BypassHook implements IXposedHookLoadPackage {
     };
 
     // ===== 运行时定位的类与对象（不硬编码） =====
-    private volatile Class<?> zccClass;   // 订阅管理类
-    private volatile Class<?> llfClass;   // 订阅数据类
-    private volatile Object fakeLlf;      // 假订阅数据实例
-    private volatile boolean installed;   // Hook 是否已安装
+    private volatile Class<?> zccClass;        // 订阅管理类
+    private volatile Class<?> llfClass;        // 订阅数据类
+    private volatile Object fakeLlf;           // 假订阅数据实例
+    private volatile boolean installed;        // Hook 是否已安装
+    private volatile ClassLoader appClassLoader;  // App 的 ClassLoader（Hook 回调中使用）
+    private volatile Class<?> fragmentClass;   // androidx.fragment.app.Fragment（缓存）
 
     private final Object lock = new Object();
 
@@ -157,6 +159,16 @@ public class BypassHook implements IXposedHookLoadPackage {
      */
     private void installHooks(ClassLoader cl) {
         XposedBridge.log("[Bypass] --- Installing hooks ---");
+
+        // 保存 ClassLoader 供 Hook 回调使用
+        appClassLoader = cl;
+
+        // 缓存 Fragment 基类（用于调用者类型判断）
+        try {
+            fragmentClass = cl.loadClass("androidx.fragment.app.Fragment");
+        } catch (Throwable t) {
+            XposedBridge.log("[Bypass] WARNING: Cannot load Fragment class: " + t);
+        }
 
         // 1. 从调用栈定位订阅管理类（getSharedPreferences 的直接调用者）
         zccClass = locateClassFromStack(cl);
@@ -409,6 +421,28 @@ public class BypassHook implements IXposedHookLoadPackage {
                 XposedBridge.log("[Bypass] Hooked ()->lf: " + m.getName());
                 count++;
             }
+
+            // Hook () → boolean 静态方法（oO0OOOo / oO0OOOO / oO0OOOO0）
+            // 根据调用者类型返回不同值，解决路径1与功能门控的矛盾：
+            // - Fragment 调用 → false（of8 路径1需要 oO0OOOo()==false → 直接显示内容）
+            // - Activity/其他调用 → true（功能门控 oO0OOOO0()==true → 允许搜索/扫码等功能）
+            //
+            // 原理：oO0OOOO0 在 "oas"==1 时直接返回 false（不检查 oO0OOOo），
+            //       导致功能门控拦截。Hook 后 Activity 调用时直接返回 true，
+            //       原方法不执行，不会内部调用 oO0OOOo，互不干扰。
+            if (params.length == 0 && ret == boolean.class) {
+                XposedBridge.hookMethod(m, new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam p) {
+                        Boolean result = determineBooleanByCaller();
+                        if (result != null) {
+                            p.setResult(result);
+                        }
+                    }
+                });
+                XposedBridge.log("[Bypass] Hooked ()->boolean: " + m.getName());
+                count++;
+            }
         }
         return count;
     }
@@ -421,6 +455,40 @@ public class BypassHook implements IXposedHookLoadPackage {
         for (Field f : cls.getDeclaredFields()) {
             if (Modifier.isStatic(f.getModifiers()) && f.getType() == type) {
                 return f;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据调用者类型决定 () → boolean 方法的返回值。
+     *
+     * 解决路径1与功能门控的矛盾：
+     * - of8.O00OO 路径1需要 oO0OOOo()==false（版本不满足 → :cond_1 → O00OO0() 显示内容）
+     * - oO0OOOO0 被 Activity 调用时需要返回 true（功能门控允许搜索/扫码等）
+     *
+     * 通过调用栈判断调用者类型：
+     * - Fragment 子类（of8）→ false（路径1）
+     * - Activity / 其他非系统类 → true（功能门控）
+     * - zcc 内部调用（oO0OOOO0 调 oO0OOOo）→ null（不拦截，让原方法执行）
+     *
+     * @return Boolean.FALSE / Boolean.TRUE / null（不拦截）
+     */
+    private Boolean determineBooleanByCaller() {
+        if (appClassLoader == null) return Boolean.TRUE;
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        for (StackTraceElement frame : stack) {
+            String cls = frame.getClassName();
+            if (isSystemOrXposedClass(cls)) continue;
+            if (zccClass != null && cls.equals(zccClass.getName())) continue;
+            try {
+                Class<?> caller = appClassLoader.loadClass(cls);
+                if (fragmentClass != null && fragmentClass.isAssignableFrom(caller)) {
+                    return Boolean.FALSE;
+                }
+                return Boolean.TRUE;
+            } catch (Throwable t) {
+                return Boolean.TRUE;
             }
         }
         return null;
